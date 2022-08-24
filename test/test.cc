@@ -33,6 +33,7 @@ TEST(HungarianAssigner, solve_basic)
     {6, 10, 1, 1},
   };
   std::vector<size_t> assignment_index;
+
   assigner.solve(cost_matrix, 3, 4, 0, &assignment_index);
 }
 

@@ -2,6 +2,7 @@
 
 ## Getting Started
 ```
+sudo apt install -y cmake g++
 mkdir build && cd build
 cmake ..
 make && make test

@@ -40,6 +40,12 @@ add_library( hungarian_algorithm
     ${SOURCE}
 )
 
+add_executable( demo
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/demo.cc
+)
+target_link_libraries( demo
+    hungarian_algorithm
+)
 
 #==============
 #  Test Setup
