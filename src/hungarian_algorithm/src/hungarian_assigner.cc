@@ -14,42 +14,87 @@ float HungarianAssigner::solve(
     const CostType &cost_matrix, const size_t n,
     const size_t m, const int mode, std::vector<size_t> *assignment_index)
 {
-
   // initialize variables
+  cost_matrix_.clear();
+  cost_matrix_ = cost_matrix;
   float cost = 0;
   n_ = n;
   m_ = m;
   dim_ = std::max(n, m);
   mode_ = mode;
 
-  // build cost matrix
-  build_cost_matrix(cost_matrix); // O(dim_^2)
+  is_working_ = true;
+  next_step_ = 0;
 
-  // step 1 and step 2 to make zero elements
-  step1(); // O(dim_^2)
-  show();
+  // run optimization
+  while (is_working_)
+  {
+    switch (next_step_)
+    {
+    case 0:
+      // build cost matrix
+      step0(); // O(dim_^2)
+      break;
 
-  step2(); // O(dim_^2)
-  show();
+    case 1:
+      // step 1
+      step1(); // O(dim_^2)
+      break;
 
-  // step 3 to cover all zeros with a minimum number of lines
-  step3(); // O(dim_^3)
-  show();
+    case 2:
+      // step 2
+      step2(); // O(dim_^2)
+      break;
 
-  // step 4 if all lines are covered, step 6 if not step 5
-  step4();
+    case 3:
+      // step 3
+      step3(); // O(dim_^2)
+      break;
 
-  show();
+    case 4:
+      // step 4
+      step4(); // O(dim_^2)
+      break;
 
+    case 5:
+      // step 5
+      step5(); // O(dim_^2)
+      break;
+
+    case 6:
+      // step 6
+      step6(); // O(dim_^2)
+      break;
+
+    case 7:
+      // step 7
+      step7(); // O(dim_^2)
+      break;
+
+    default:
+      break;
+    }
+
+    if (next_step_ == -1)
+      break;
+  }
+
+  assignment_index->clear();
+  for (size_t row = 0; row < n_; ++row)
+  {
+    assignment_index->emplace_back(results_[row]);
+    cost += cost_matrix_[row][results_[row]];
+  }
   return cost;
 }
 
-void HungarianAssigner::build_cost_matrix(const CostType &cost_matrix)
+void HungarianAssigner::step0()
 {
-  cost_matrix_ = cost_matrix;
+  opt_matrix_.clear();
   opt_matrix_.resize(dim_, std::vector<float>(dim_, 0));
-  prime_.resize(dim_, std::vector<bool>(dim_, false));
-  star_.resize(dim_, std::vector<bool>(dim_, false));
+  mask_.clear();
+  mask_.resize(dim_, std::vector<int>(dim_, 0));
+  path_.resize(dim_ + 2, std::vector<int>(2, 0));
 
   for (size_t row = 0; row < dim_; ++row)
   {
@@ -59,11 +104,11 @@ void HungarianAssigner::build_cost_matrix(const CostType &cost_matrix)
       {
         if (mode_ == 0)
         {
-          opt_matrix_[row][col] = cost_matrix[row][col];
+          opt_matrix_[row][col] = cost_matrix_[row][col];
         }
         else if (mode_ == 1)
         {
-          opt_matrix_[row][col] = -cost_matrix[row][col];
+          opt_matrix_[row][col] = -cost_matrix_[row][col];
         }
         else
         {
@@ -72,16 +117,30 @@ void HungarianAssigner::build_cost_matrix(const CostType &cost_matrix)
       }
     }
   }
+
+  next_step_ = 1;
 }
 
-void HungarianAssigner::show()
+void HungarianAssigner::show(std::string name = "")
 {
+  std::cout << name << std::endl;
   std::cout << "opt_matrix_: " << std::endl;
   for (size_t row = 0; row < dim_; ++row)
   {
     for (size_t col = 0; col < dim_; ++col)
     {
       std::cout << opt_matrix_[row][col] << " ";
+    }
+    std::cout << std::endl;
+  }
+  std::cout << std::endl;
+
+  std::cout << "mask_: " << std::endl;
+  for (size_t row = 0; row < dim_; ++row)
+  {
+    for (size_t col = 0; col < dim_; ++col)
+    {
+      std::cout << mask_[row][col] << " ";
     }
     std::cout << std::endl;
   }
@@ -97,175 +156,312 @@ void HungarianAssigner::step1()
     for (auto &r : row)
     {
       r -= min_value;
-      
     }
   }
 
-  for (size_t row = 0; row < dim_; ++row)
-  {
-    for (size_t col = 0; col < dim_; ++col)
-    {
-      if (std::abs(opt_matrix_[row][col]) < epsilon_)
-      {
-        prime_[row][col] = true;
-      }
-    }
-  }
+  show("step1");
+  next_step_ = 2;
 }
 
 void HungarianAssigner::step2()
 {
+  line_row_.clear();
+  line_col_.clear();
+
   /** step 2: make minimum value to zero along the column */
   for (size_t col = 0; col < dim_; ++col)
   {
-    std::vector<float> column(dim_, 0);
     for (size_t row = 0; row < dim_; ++row)
     {
-      column[row] = opt_matrix_[row][col];
-    }
-    auto min_value = *std::min_element(column.begin(),
-                                       column.end());
-    for (size_t row = 0; row < dim_; ++row)
-    {
-      opt_matrix_[row][col] -= min_value;
+      if (opt_matrix_[row][col] == 0 && line_row_.count(row) == 0 && line_col_.count(col) == 0)
+      {
+        mask_[row][col] = kStar;
+        line_row_.insert(row);
+        line_col_.insert(col);
+      }
     }
   }
+
+  next_step_ = 3;
+  show("step2");
 }
+
 void HungarianAssigner::step3()
 {
   line_row_.clear();
   line_col_.clear();
 
-  std::vector<std::vector<bool>> zero_checker(dim_, std::vector<bool>(dim_, false));
-
   for (size_t row = 0; row < dim_; ++row)
   {
     for (size_t col = 0; col < dim_; ++col)
     {
-      if (std::abs(opt_matrix_[row][col]) <= epsilon_ && !zero_checker[row][col])
+      if (mask_[row][col] == kStar)
       {
-        zero_checker[row][col] = true;
-
-        size_t zero_in_row = 0;
-        for (size_t col_check = 0; col_check < dim_; ++col_check)
-        {
-          if (std::abs(opt_matrix_[row][col_check]) <= epsilon_ && !zero_checker[row][col_check])
-          {
-            ++zero_in_row;
-          }
-        }
-
-        size_t zero_in_col = 0;
-        for (size_t row_check = 0; row_check < dim_; ++row_check)
-        {
-          if (std::abs(opt_matrix_[row_check][col]) <= epsilon_ && !zero_checker[row_check][col])
-          {
-            ++zero_in_col;
-          }
-        }
-
-        if (zero_in_row < zero_in_col)
-        {
-          line_col_.insert(col);
-          for (size_t row_check = 0; row_check < dim_; ++row_check)
-          {
-            if (std::abs(opt_matrix_[row_check][col]) <= epsilon_ && !zero_checker[row_check][col])
-            {
-              zero_checker[row_check][col] = true;
-            }
-          }
-        }
-        else
-        {
-          line_row_.insert(row);
-          for (size_t col_check = 0; col_check < dim_; ++col_check)
-          {
-            if (std::abs(opt_matrix_[row][col_check]) <= epsilon_ && !zero_checker[row][col_check])
-            {
-              zero_checker[row][col_check] = true;
-            }
-          }
-        }
+        line_col_.insert(col);
       }
     }
   }
-}
-void HungarianAssigner::step4()
-{
 
-  if (line_row_.size() + line_col_.size() < dim_)
+  size_t cnt_col = 0;
+  for (size_t col = 0; col < dim_; ++col)
   {
-    step5();
+    if (line_col_.count(col) == 1)
+    {
+      cnt_col++;
+    }
+  }
+
+  if (cnt_col < dim_)
+  {
+    next_step_ = 4;
   }
   else
   {
-    step6();
+    next_step_ = 7;
+  }
+
+  show("step3");
+}
+
+void HungarianAssigner::step4()
+{
+  while (true)
+  {
+    auto [row, col] = find_zero_cost_element();
+    if (row == -1)
+    {
+      next_step_ = 6;
+      show("step4 - 6");
+      return;
+    }
+
+    mask_[row][col] = kPrime;
+    if (star_in_row(row))
+    {
+      auto col = find_col_star_in_row(row);
+      line_row_.insert(row);
+      line_col_.erase(col);
+    }
+    else
+    {
+      next_step_ = 5;
+      path_row_0_ = row;
+      path_col_0_ = col;
+      show("step4 - 5");
+      return;
+    }
   }
 }
+
+std::pair<int, int> HungarianAssigner::find_zero_cost_element()
+{
+
+  bool found = false;
+  int zero_row = -1, zero_col = -1;
+
+  for (size_t row = 0; row < dim_; ++row)
+  {
+    for (size_t col = 0; col < dim_; ++col)
+    {
+      if (opt_matrix_[row][col] == 0 && line_row_.count(row) == 0 && line_col_.count(col) == 0)
+      {
+        found = true;
+        zero_row = static_cast<int>(row);
+        zero_col = static_cast<int>(col);
+      }
+
+      if (found)
+      {
+        break;
+      }
+    }
+    if (found)
+    {
+      break;
+    }
+  }
+
+  return {zero_row, zero_col};
+}
+
+bool HungarianAssigner::star_in_row(const size_t row)
+{
+  for (size_t col = 0; col < dim_; ++col)
+  {
+    if (mask_[row][col] == kStar)
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+size_t HungarianAssigner::find_col_star_in_row(const size_t row)
+{
+  for (size_t col = 0; col < dim_; ++col)
+  {
+    if (mask_[row][col] == kStar)
+    {
+      return col;
+    }
+  }
+  assert(false && "No star in row");
+}
+
 void HungarianAssigner::step5()
 {
-  float min_value = std::numeric_limits<float>::max();
+  std::cout << "1\n";
+  cnt_path_ = 1;
+  path_[cnt_path_ - 1][0] = path_row_0_;
+  path_[cnt_path_ - 1][1] = path_col_0_;
+  std::cout << "2\n";
 
-  for (size_t row = 0; row < dim_; ++row)
+  bool is_working = true;
+  while (is_working)
   {
-    for (size_t col = 0; col < dim_; ++col)
+    auto row = find_row_star_in_col(path_[cnt_path_ - 1][1]);
+    if (row > -1)
     {
-      if (line_row_.count(row) == 0 && line_col_.count(col) == 0)
-      {
-        if (opt_matrix_[row][col] < min_value)
-        {
-          min_value = opt_matrix_[row][col];
-        }
-      }
+      std::cout << "3\n";
+      cnt_path_ += 1;
+      path_[cnt_path_ - 1][0] = row;
+      path_[cnt_path_ - 1][1] = path_[cnt_path_ - 2][1];
+    }
+    else
+    {
+      is_working = false;
+    }
+
+    if (is_working)
+    {
+      std::cout << "4 1\n";
+      auto col = find_col_prime_in_row(path_[cnt_path_ - 1][0]);
+      std::cout << "4 2\n";
+      cnt_path_ += 1;
+      std::cout << "4 3\n";
+      std::cout << "size: " << path_.size() << std::endl;
+      std::cout << "cnt_path_: " << cnt_path_ << std::endl;
+      path_[cnt_path_ - 1][0] = path_[cnt_path_ - 2][0];
+      std::cout << "4 4\n";
+      path_[cnt_path_ - 1][1] = col;
     }
   }
-
-  for (size_t row = 0; row < dim_; ++row)
-  {
-    for (size_t col = 0; col < dim_; ++col)
-    {
-      if (line_row_.count(row) == 0 && line_col_.count(col) == 0)
-      {
-        opt_matrix_[row][col] -= min_value;
-      }
-      if (line_row_.count(row) == 1 && line_col_.count(col) == 1)
-      {
-        opt_matrix_[row][col] += min_value;
-      }
-    }
-  }
-
-  step3();
-  step4();
+  std::cout << "5\n";
+  augment_path();
+  std::cout << "6\n";
+  clear_lines();
+  std::cout << "7\n";
+  clear_primes();
+  std::cout << "8\n";
+  next_step_ = 3;
+  show("step5");
 }
 
 void HungarianAssigner::step6()
 {
-  std::cout << "step6" << std::endl;
-
-  std::vector<std::vector<size_t>> results(dim_);
+  float min_val = std::numeric_limits<float>::max();
+  for (size_t row = 0; row < dim_; ++row)
+  {
+    for (size_t col = 0; col < dim_; ++col)
+    {
+      if (opt_matrix_[row][col] < min_val && line_row_.count(row) == 0 && line_col_.count(col) == 0)
+      {
+        min_val = opt_matrix_[row][col];
+      }
+    }
+  }
 
   for (size_t row = 0; row < dim_; ++row)
   {
     for (size_t col = 0; col < dim_; ++col)
     {
-      if (line_row_.count(row) == 1 || line_col_.count(col) == 1)
+      if (line_row_.count(row) == 1)
       {
-        if (std::abs(opt_matrix_[row][col]) < epsilon_)
-        {
-          results[row].push_back(col);
-        }
+        opt_matrix_[row][col] += min_val;
+      }
+      if (line_col_.count(col) == 0)
+      {
+        opt_matrix_[row][col] -= min_val;
       }
     }
   }
 
-  for (auto row : results)
+  next_step_ = 4;
+  show("step6");
+}
+
+int HungarianAssigner::find_row_star_in_col(const size_t col)
+{
+  for (size_t row = 0; row < dim_; ++row)
   {
-    std::cout << "row: ";
-    for (auto col : row)
+    if (mask_[row][col] == kStar)
     {
-      std::cout << col << " ";
+      return row;
     }
-    std::cout << std::endl;
   }
+
+  return -1;
+}
+
+size_t HungarianAssigner::find_col_prime_in_row(const size_t row)
+{
+  for (size_t col = 0; col < dim_; ++col)
+  {
+    if (mask_[row][col] == kPrime)
+    {
+      return col;
+    }
+  }
+  assert(false && "No prime in row");
+}
+
+void HungarianAssigner::augment_path()
+{
+  for (size_t path = 0; path < cnt_path_; ++path)
+  {
+    if (mask_[path_[path][0]][path_[path][1]] == kStar)
+    {
+      mask_[path_[path][0]][path_[path][1]] = 0;
+    }
+    else
+    {
+      mask_[path_[path][0]][path_[path][1]] = kStar;
+    }
+  }
+}
+void HungarianAssigner::clear_lines()
+{
+  line_row_.clear();
+  line_col_.clear();
+}
+void HungarianAssigner::clear_primes()
+{
+  for (size_t row = 0; row < dim_; ++row)
+  {
+    for (size_t col = 0; col < dim_; ++col)
+    {
+      if (mask_[row][col] == kPrime)
+      {
+        mask_[row][col] = 0;
+      }
+    }
+  }
+}
+
+void HungarianAssigner::step7()
+{
+  show("step7");
+  results_.resize(n_);
+  for (size_t row = 0; row < n_; ++row)
+  {
+    for (size_t col = 0; col < dim_; ++col)
+    {
+      if (mask_[row][col] == kStar)
+      {
+        results_[row] = col;
+      }
+    }
+  }
+
+  next_step_ = -1;
 }
