@@ -6,6 +6,7 @@
  */
 
 #include "hungarian_assigner.hpp"
+#include <iostream>
 
 float HungarianAssigner::solve(
     const CostType &cost_matrix, const size_t n,
@@ -21,14 +22,20 @@ float HungarianAssigner::solve(
   // build cost matrix
   build_cost_matrix(cost_matrix);
 
+  // step 1 and step 2 to make zero elements
+  
+
   return cost;
 }
 
 void HungarianAssigner::build_cost_matrix(const CostType &cost_matrix){
   cost_matrix_.resize(dim_, std::vector<float>(dim_, 0));
+  
   for (size_t row = 0; row < dim_; ++row) {
     for (size_t col = 0; col < dim_; ++col) {
-      cost_matrix_[row][col] = cost_matrix[row][col];
+      if (row < n_ & col < m_){
+        cost_matrix_[row][col] = cost_matrix[row][col];
+      }
     }
   }
 }

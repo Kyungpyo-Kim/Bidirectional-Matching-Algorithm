@@ -9,9 +9,12 @@
 #include <limits>
 
 class HungarianAssigner {
-  using CostType = std::vector<std::vector<float>>;
+public:
+  HungarianAssigner() = default;
+  ~HungarianAssigner() = default;
 
 public:
+  using CostType = std::vector<std::vector<float>>;
   float solve(const CostType &cost_matrix, const size_t n, const size_t m,
               const int mode, std::vector<size_t> *assignment_index);
 
