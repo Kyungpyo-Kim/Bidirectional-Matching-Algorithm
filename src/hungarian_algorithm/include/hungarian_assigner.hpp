@@ -37,9 +37,9 @@ private:
 
 private:
   // support step 4
-  std::pair<int, int> find_zero_cost_element();
-  bool star_in_row(const size_t row);
-  size_t find_col_star_in_row(const size_t row);
+  std::pair<int, int> step4_find_zero_cost_element();
+  size_t step4_find_col_star_in_row(const size_t row);
+  bool step4_star_in_row(const size_t row);
 
 private:
   // suport step 5
