@@ -50,7 +50,7 @@ File structure 및 클래스 API는 아래와 같이 구현되어있다.
                     const int mode, AssignmentType *assignment_index);
         ```
 
-    * exmaple
+    * API exmaple
         ```c++
         HungarianAssigner assigner;
         HungarianAssigner::CostType cost_matrix = {
@@ -69,10 +69,10 @@ File structure 및 클래스 API는 아래와 같이 구현되어있다.
     - 기존 Hungarian algorihtm은 cost를 minimization 하는 알고리즘으로, cost를 maximization 하기 위해서는 입력 cost matrix의 부호를 반대로 하여 알고리즘을 수행하였다.
 
 * Time complexity: `O(N^4)`
-    - 구현한 알고리즘은 4단계로 구성되어 `preliminaries` 단계, `step1`, `step2`, `step3` 순서로 수행되며, 조건에 따라 `step1` -> `step3` -> `step1` 또는 `step1` -> `step2` -> `step3` -> `step1` 을 반복한다. 이러한 반복은 알고리즘을 수행하면서 비용함수가 최저가 되는 조합을 만들어 내기 위한 과정으로, `N`개의 assignment가 필요할 경우, `NxN`의 cost matrix가 주어지면, 최악의 경우 `n-1` 번 반복하게 된다. `step1`의 시간복잡도가 `O(N^3)` 이므로(`step2`, `step3`는 `O(N^2)`), 알고리즘의 시간복잡도는 `O(N^4)` 이다.
+    - 구현한 알고리즘은 4단계로 구성되어 `preliminaries` 단계, `step1`, `step2`, `step3` 순서로 수행되며, 조건에 따라 `step1` -> `step3` -> `step1` 또는 `step1` -> `step2` -> `step3` -> `step1` 을 반복한다. 이러한 반복은 알고리즘을 수행하면서 cost가 최저가 되는 조합을 만들어 내기 위한 과정으로, `N`개의 assignment가 필요할 경우, `NxN`의 cost matrix가 주어지면, 최악의 경우 `n-1` 번 반복하게 된다. `step1`의 시간복잡도가 `O(N^3)` 이므로(`step2`, `step3`는 `O(N^2)`), 알고리즘의 시간복잡도는 `O(N^4)` 이다.
 
 * `O(N^3)` Hungarian Algorithm
-    - David Krouse의 _On implementing 2D rectangular assignment algorithms 2016_ 논문을 참고하면 O(N^3) 의 시간 복잡도로 동작하는 알고리즘 구현이 가능하다고 한다. 이부분은 추후 확인해보아야겠다. 
+    - David Krouse의 _On implementing 2D rectangular assignment algorithms 2016_ 논문을 참고하면 `O(N^3)` 의 시간 복잡도로 동작하는 알고리즘 구현이 가능하다고 한다. 이부분은 추후 확인해보아야겠다. 
 
 
 ## Reference
