@@ -1,4 +1,4 @@
-# Hungarian Algorithm
+# Bidirectional Matching Algorithm
 
 ## Getting Started
 
